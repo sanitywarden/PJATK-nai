@@ -14,14 +14,11 @@ struct Entry {
 };
 
 Entry entry_from_line(std::string line) {
-    int attribute_index = 0;
+    std::replace_if(line.begin(), line.end(), [](char c){ return c == '\t'; }, '|');
+    
     char previous = ' ';
-
     Entry entry;
 
-    std::replace_if(line.begin(), line.end(), [](char c){ return c == '\t'; }, '|');
-
-    std::string attribute_value = "";
     for(int i = 0; i < line.length() - 1; i++) {
         if(previous == '|' || i == 0) {
             if(i - 1 == line.find_last_of('|')) {
@@ -46,7 +43,6 @@ Entry entry_from_line(std::string line) {
 
     return entry;
 }
-
 
 int main(int argc, char *argv[]) {
     std::cout << "input K\n";
