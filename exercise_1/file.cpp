@@ -4,8 +4,6 @@
 #include <fstream>
 #include <vector>
 #include <cctype>
-#include <cmath>
-#include <climits>
 #include <iomanip>
 
 struct Entry {
@@ -26,7 +24,7 @@ Entry entry_from_line(std::string line) {
                 break;
             }
 
-            auto next_bar = line.find('|', i);
+            int next_bar = line.find('|', i);
             auto length = abs(i - next_bar);
             auto value_str = line.substr(i, length);
             

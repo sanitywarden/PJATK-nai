@@ -1,3 +1,5 @@
 mpp*
 *.exe
 .vscode
+*.out
+file
