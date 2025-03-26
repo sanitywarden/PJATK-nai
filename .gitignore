@@ -2,4 +2,4 @@ mpp*
 *.exe
 .vscode
 *.out
-file
+.DS_Store
