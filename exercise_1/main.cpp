@@ -5,6 +5,8 @@
 #include <vector>
 #include <cctype>
 #include <iomanip>
+#include <cmath>
+#include <map>
 
 struct Entry {
     std::vector<double> attributes;
@@ -42,16 +44,70 @@ Entry entry_from_line(std::string line) {
     return entry;
 }
 
-int main(int argc, char *argv[]) {
-    std::cout << "input K\n";
+std::vector<Entry> entries_from_file(std::string filename) {
+    std::fstream file(filename.c_str(), std::ios::in);
+    std::string line;
+    std::vector<Entry> entries;
 
-    int k = 1;
-    std::cin >> k;
+    while(std::getline(file, line) ) {
+        auto entry = entry_from_line(line);
+        entries.push_back(entry);
+    }
+    file.close();
+    return entries;
+}
 
-    std::cout << "input file (format: <name>.txt)\n";
-    std::string filename;
-    std::cin >> filename;
+void sort_entries(std::vector<Entry>& entries, Entry entry_to_test) {
+    std::sort(entries.begin(), entries.end(), [entry_to_test](Entry a, Entry b) {
+        double sum_a = 0;
+        for(int i = 0; i < a.attributes.size(); i++)
+            sum_a += std::pow(a.attributes[i] - entry_to_test.attributes[i], 2);
+        sum_a = std::sqrt(sum_a);
 
+        double sum_b = 0;
+        for(int i = 0; i < b.attributes.size(); i++)
+            sum_b += std::pow(b.attributes[i] - entry_to_test.attributes[i], 2);
+        sum_b = std::sqrt(sum_b);
+
+        return sum_a < sum_b;
+    });
+}
+
+bool is_correct(Entry to_test, std::vector <Entry>& decision_from_test, int k) {
+    auto training = entries_from_file("iris_training.txt");
+    sort_entries(training, to_test);
+
+    std::map <std::string, int> counts_1;
+    std::map <std::string, int> counts_2;
+
+    for(int i = 0; i < k; i++) {
+        std::cout << decision_from_test[i].decision << " - " << training[i].decision << "\n";
+        counts_1[decision_from_test[i].decision]++;        
+        counts_2[training[i].decision]++;        
+    }
+
+    std::pair <std::string, int> choice_1 = { "", 0 };
+    std::pair <std::string, int> choice_2 = { "", 0 };
+
+    for(int i = 0; i < k; i++) {
+        if(counts_1[decision_from_test[i].decision] > choice_1.second) {
+            choice_1.first = decision_from_test[i].decision;
+            choice_1.second = counts_1[decision_from_test[i].decision];
+        }
+
+        if(counts_2[training[i].decision] > choice_2.second) {
+            choice_2.first = training[i].decision;
+            choice_2.second = counts_2[decision_from_test[i].decision];
+        }
+    }
+
+    return choice_1.first == choice_2.first;
+} 
+
+int correct = 0;
+int total = 0;
+
+bool program(int k, std::string filename) {
     std::cout << "input parameters (use '.' or ',' for floating point). input character 'x' to end input\n";
     Entry entry_to_test;
 
@@ -67,36 +123,34 @@ int main(int argc, char *argv[]) {
         entry_to_test.attributes.push_back(std::stod(input.c_str()));
     }
 
-    std::fstream file(filename.c_str(), std::ios::in);
-    std::string line;
-    std::vector<Entry> entries;
+    auto entries = entries_from_file(filename);
+    sort_entries(entries, entry_to_test);
 
-    while(std::getline(file, line) ) {
-        auto entry = entry_from_line(line);
-        entries.push_back(entry);
-    }
-    file.close();
+    if(is_correct(entry_to_test, entries, k))
+        correct++;
+    total++;
 
-    std::sort(entries.begin(), entries.end(), [entry_to_test](Entry a, Entry b) {
-        double sum_a = 0;
-        for(int i = 0; i < a.attributes.size(); i++)
-            sum_a += std::pow(a.attributes[i] - entry_to_test.attributes[i], 2);
-        sum_a = std::sqrt(sum_a);
+    char ch;
+    std::cout << "do you want to continue? (y/n)\n";
+    std::cin >> ch;
 
-        double sum_b = 0;
-        for(int i = 0; i < b.attributes.size(); i++)
-            sum_b += std::pow(b.attributes[i] - entry_to_test.attributes[i], 2);
-        sum_b = std::sqrt(sum_b);
+    if(ch == 'n')
+        std::cout << "correct: " << correct << " precision: " << (correct * 100 / total) << "% \n";  
 
-        return sum_a < sum_b;
-    });
+    return ch == 'y';
+}
 
-    std::cout << "results for: file=" << filename << " K=" << k << " data=";;
-    for(auto input : entry_to_test.attributes) std::cout << input << " ";
-    std::cout << "\n";
+int main(int argc, char *argv[]) {
+    std::cout << "input K\n";
 
-    for(int i = 0; i < k; i++) {
-        auto decision = entries[i];
-        std::cout << "decision K=" << i + 1 << " -> " << decision.decision << "\n"; 
-    }
+    int k = 1;
+    std::cin >> k;
+
+    std::cout << "! K values larger than dataset will not work !\n";
+
+    std::cout << "input file (format: <name>.txt)\n";
+    std::string filename;
+    std::cin >> filename;
+
+    while(program(k, filename)) {}
 }
