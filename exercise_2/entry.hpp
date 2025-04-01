@@ -1,12 +1,10 @@
+#include <vector>
 #include <string>
 #include <algorithm>
-#include <iostream>
 #include <fstream>
-#include <vector>
-#include <cctype>
-#include <iomanip>
 #include <cmath>
 #include <map>
+#include <iostream>
 
 struct Entry {
     std::vector<double> attributes;
@@ -54,6 +52,7 @@ std::vector<Entry> entries_from_file(std::string filename) {
         entries.push_back(entry);
     }
     file.close();
+    
     return entries;
 }
 
@@ -73,6 +72,12 @@ void sort_entries(std::vector<Entry>& entries, Entry entry_to_test) {
     });
 }
 
+std::vector<Entry> entries_from_file_sorted(std::string filename, Entry entry) {
+    auto entries = entries_from_file(filename);
+    sort_entries(entries, entry);
+    return entries;
+}
+
 bool is_correct(Entry to_test, std::vector <Entry>& decision_from_test, int k) {
     auto training = entries_from_file("iris_training.txt");
     sort_entries(training, to_test);
@@ -81,7 +86,7 @@ bool is_correct(Entry to_test, std::vector <Entry>& decision_from_test, int k) {
     std::map <std::string, int> counts_2;
 
     for(int i = 0; i < k; i++) {
-        std::cout << "test: " << decision_from_test[i].decision << " - from file: " << training[i].decision << "\n";
+        std::cout << decision_from_test[i].decision << " - " << training[i].decision << "\n";
         counts_1[decision_from_test[i].decision]++;        
         counts_2[training[i].decision]++;        
     }
@@ -103,54 +108,3 @@ bool is_correct(Entry to_test, std::vector <Entry>& decision_from_test, int k) {
 
     return choice_1.first == choice_2.first;
 } 
-
-int correct = 0;
-int total = 0;
-
-bool program(int k, std::string filename) {
-    std::cout << "input parameters (use '.' or ',' for floating point). input character 'x' to end input\n";
-    Entry entry_to_test;
-
-    while(true) {
-        std::string input;
-        std::cin >> input;
-        if(input.find('x') != std::string::npos)
-            break;
-
-        if(input.find(',') != std::string::npos)
-            input[input.find(',')] = '.';
-
-        entry_to_test.attributes.push_back(std::stod(input.c_str()));
-    }
-
-    auto entries = entries_from_file(filename);
-    sort_entries(entries, entry_to_test);
-
-    if(is_correct(entry_to_test, entries, k))
-        correct++;
-    total++;
-
-    char ch;
-    std::cout << "do you want to continue? (y/n)\n";
-    std::cin >> ch;
-
-    if(ch == 'n')
-        std::cout << "correct: " << correct << " precision: " << (correct * 100 / total) << "% \n";  
-
-    return ch == 'y';
-}
-
-int main(int argc, char *argv[]) {
-    std::cout << "input K\n";
-
-    int k = 1;
-    std::cin >> k;
-
-    std::cout << "! K values larger than dataset will not work !\n";
-
-    std::cout << "input file (format: <name>.txt)\n";
-    std::string filename;
-    std::cin >> filename;
-
-    while(program(k, filename)) {}
-}
