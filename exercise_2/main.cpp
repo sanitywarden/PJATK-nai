@@ -1,86 +1,120 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <vector>
 #include <string>
-#include <fstream>
-#include <iostream>
+#include <cmath>
 
-#include "entry.hpp"
+struct Entry {
+    std::vector<double> attributes;
+    std::string label;
+};
 
 class Perceptron {
+private:
+    std::vector<double> weights;
+    double learning_rate;
+
 public:
-    double _w1;
-    double _w2;
-    double _w3;
-    double _w4;
-    double _threshold;
+    // properties = 4
+    Perceptron(size_t properties, double lr = 0.1) 
+        : weights(properties, 0.0), learning_rate(lr) {}
 
-    Perceptron(double w1, double w2, double w3, double w4, double threshold)
-        : _w1(w1), _w2(w2), _w3(w3), _w4(w4), _threshold(threshold) {}
-
-    double net(double x1, double x2, double x3, double x4) {
-        return _w1 * x1 + _w2 * x2 + _w3 * x3 + _w4 * x4;
+    // calculate net value
+    double net(const std::vector<double>& inputs) {
+        double sum = 0;
+        for (size_t i = 0; i < inputs.size(); ++i)
+            sum += inputs[i] * weights[i];
+        return sum;
     }
 
-    bool compute(double x1, double x2, double x3, double x4) {
-        return net(x1, x2, x3, x4) >= _threshold;
+    // classify inputs to be either a 'iris-setosa' or 'other'
+    int compute(const std::vector<double>& inputs) {
+        return net(inputs) >= 0.0 ? 1 : 0;
+    }
+    
+    // teach the perceptron
+    void train(const std::vector<Entry>& training_data, int rounds = 10) {
+        for (int round = 0; round < rounds; ++round) {
+            for (const auto& entry : training_data) {
+                // d - expected
+                int expected = (entry.label == "Iris-setosa") ? 1 : 0;
+                
+                // y - predicted
+                int predicted = compute(entry.attributes);
+
+                // (d - y)
+                int error = expected - predicted;  
+
+                // from delta rule
+                // w' = w + (d - y) * learning rate * weight
+                for (size_t i = 0; i < weights.size(); ++i)
+                    weights[i] += learning_rate * error * entry.attributes[i];
+            }
+        }
     }
 
-    std::string decision_from_file(std::string filename, Entry entry) {
-        auto from_file_sorted = entries_from_file_sorted(filename, entry);
-        return from_file_sorted[0].decision;
+    double test(const std::vector<Entry>& test_data) {
+        int correct = 0;
+        for (const auto& entry : test_data) {
+            int expected = (entry.label == "Iris-setosa") ? 1 : 0;
+            int predicted = compute(entry.attributes);
+            if(expected == predicted)
+                ++correct;
+        }
+        double accuracy = 100.0 * correct / test_data.size();
+        std::cout << "Correctly classified: " << correct << "/" << test_data.size() << "\n";
+        std::cout << "Accuracy: " << accuracy << "%\n";
+        return accuracy;
     }
 
-    void learn(Entry entry) {
-        auto from_file = decision_from_file("iris_training.txt", entry);
-        auto decision = compute(
-            entry.attributes[0], 
-            entry.attributes[1], 
-            entry.attributes[2], 
-            entry.attributes[3]) ? "iris-setosa" : "other";
-        
-        std::cout << "Guess: " << decision << " | Real: " << from_file << "\n";
-
-        auto d = from_file == "iris-setosa";
-        auto y = decision == "iris-setosa";
-
-        if(d == y)
-            return;
-
-        _w1 = _w1 + (d - y) * _threshold * entry.attributes[0];
-        _w2 = _w2 + (d - y) * _threshold * entry.attributes[1];
-        _w3 = _w3 + (d - y) * _threshold * entry.attributes[2];
-        _w4 = _w4 + (d - y) * _threshold * entry.attributes[3];
-
-        std::cout << "\tWeights changed " << _w1 << " " << _w2 << " " << _w3 << " " << _w4 << "\n";
-    }
-
-    void train() {
-        auto training = entries_from_file("iris_training.txt");
-        for(auto data : training)
-            this->learn(data);
+    std::string classify_manual(const std::vector<double>& input) {
+        return compute(input) ? "Iris-setosa" : "Other";
     }
 };
 
+std::vector<Entry> read_file(const std::string& filename) {
+    std::ifstream file(filename);
+    std::vector<Entry> data;
+    std::string line;
+
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string token;
+        Entry entry;
+
+        for (int i = 0; i < 4; ++i) {
+            std::getline(iss, token, ',');
+            entry.attributes.push_back(std::stod(token));
+        }
+        std::getline(iss, token);
+        entry.label = token;
+        data.push_back(entry);
+    }
+    return data;
+}
+
 int main() {
-    double w1;
-    double w2;
-    double w3;
-    double w4;
-    double threshold;
+    std::vector<Entry> training_data = read_file("iris_training.txt");
+    std::vector<Entry> test_data = read_file("iris_test.txt");
 
-    std::cout << "input weights (4) and threshold (1): \n"; 
-    std::cin >> w1 >> w2 >> w3 >> w4;
+    Perceptron p(4, 0.1); // 4 features, learning rate = 0.1
+    p.train(training_data, 10);
+    p.test(test_data);
 
-    Perceptron p = Perceptron(w1, w2, w3, w4, threshold);
-    p.train();
+    while (true) {
+        std::vector<double> input(4);
+        std::cout << "Enter 4 attribute values (or 'q' to quit): ";
+        std::string temp;
+        std::cin >> temp;
+        if (temp == "q") break;
+        input[0] = std::stod(temp);
+        for (int i = 1; i < 4; ++i)
+            std::cin >> input[i];
 
-    double x1;
-    double x2;
-    double x3;
-    double x4;
-    std::cout << "input data to test (4): \n";
-    std::cin >> x1;
-    std::cin >> x2;
-    std::cin >> x3;
-    std::cin >> x4;
-    std::cout << "result for your data net=" << p.net(x1, x2, x3, x4) << " is " << p.compute(x1, x2, x3, x4) << "\n";
+        std::string result = p.classify_manual(input);
+        std::cout << "Classification result: " << result << "\n";
+    }
+
+    return 0;
 }
