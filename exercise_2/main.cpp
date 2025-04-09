@@ -17,8 +17,8 @@ private:
 
 public:
     // properties = 4
-    Perceptron(size_t properties, double lr = 0.1) 
-        : weights(properties, 0.0), learning_rate(lr) {}
+    Perceptron(size_t property_count, double learning_rate = 0.1) 
+        : weights(property_count, 0.0), learning_rate(learning_rate) {}
 
     // calculate net value
     double net(const std::vector<double>& inputs) {
@@ -30,6 +30,7 @@ public:
 
     // classify inputs to be either a 'iris-setosa' or 'other'
     int compute(const std::vector<double>& inputs) {
+        // threshold theta is 0
         return net(inputs) >= 0.0 ? 1 : 0;
     }
     
@@ -48,6 +49,7 @@ public:
 
                 // from delta rule
                 // w' = w + (d - y) * learning rate * weight
+                // w' += (d - y) * learning rate * weight
                 for (size_t i = 0; i < weights.size(); ++i)
                     weights[i] += learning_rate * error * entry.attributes[i];
             }
@@ -68,7 +70,7 @@ public:
         return accuracy;
     }
 
-    std::string classify_manual(const std::vector<double>& input) {
+    std::string classify(const std::vector<double>& input) {
         return compute(input) ? "Iris-setosa" : "Other";
     }
 };
@@ -112,7 +114,7 @@ int main() {
         for (int i = 1; i < 4; ++i)
             std::cin >> input[i];
 
-        std::string result = p.classify_manual(input);
+        std::string result = p.classify(input);
         std::cout << "Classification result: " << result << "\n";
     }
 
